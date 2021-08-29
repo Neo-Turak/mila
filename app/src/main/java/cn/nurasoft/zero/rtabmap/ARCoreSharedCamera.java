@@ -8,7 +8,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/*import com.google.ar.core.Anchor;
+import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.CameraConfig;
 import com.google.ar.core.CameraConfigFilter;
@@ -24,9 +24,6 @@ import com.google.ar.core.TrackingState;
 import com.google.ar.core.exceptions.CameraNotAvailableException;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.core.exceptions.UnavailableException;
-import com.introlab.rtabmap.RTABMapActivity;
-import com.introlab.rtabmap.RTABMapLib;
-import com.introlab.rtabmap.TOF_ImageReader;*/
 
 import android.content.Context;
 import android.graphics.ImageFormat;

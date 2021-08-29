@@ -109,11 +109,9 @@ public class SketchfabActivity extends Activity implements OnClickListener {
 	@Override
 	public void onClick(View v) {
 		// Handle button clicks.
-		switch (v.getId()) {
-		case R.id.button_ok:
+		if (v.getId() == R.id.button_ok) {
 			shareToSketchfab();
-			break;
-		default:
+		} else {
 			return;
 		}
 	}

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:android="http://schemas.android.com/apk/res/android">
         
     <group android:id="@+id/group_actions">
        <group android:checkableBehavior="single">
@@ -9,7 +10,8 @@
 	   </group>
 	   
        <item android:id="@+id/new_scan" android:title="New Scan"/>
-       <item android:id="@+id/open" android:title="Library" android:showAsAction="ifRoom"/>
+       <item android:id="@+id/open" android:title="Library"
+		   app:showAsAction="ifRoom" />
 	   <item android:id="@+id/save" android:title="Save"/>
        
         <item android:id="@+id/post_processing" android:title="Optimize">

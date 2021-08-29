@@ -17,6 +17,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.ActivityManager.MemoryInfo;
 import android.app.AlertDialog;
@@ -88,12 +89,17 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentActivity;
 
 /*import com.google.ar.core.ArCoreApk;
 import com.google.atap.tangoservice.Tango;
 import com.huawei.hiar.AREnginesApk;*/
+
+import com.google.ar.core.ArCoreApk;
+import com.google.atap.tangoservice.Tango;
+import com.huawei.hiar.AREnginesApk;
 
 import cn.nurasoft.zero.R;
 
@@ -110,7 +116,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	public static boolean DISABLE_LOG = false;
 
 	// The minimum Tango Core version required from this application.
-	private static final int  MIN_TANGO_CORE_VERSION = 9377;
+	private static final int MIN_TANGO_CORE_VERSION = 9377;
 
 	// The package name of Tang Core, used for checking minimum Tango Core version.
 	private static final String TANGO_PACKAGE_NAME = "com.google.tango";
@@ -124,10 +130,10 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	public static final String RTABMAP_SDCARD_PATH = "/sdcard/";
 	public static final String RTABMAP_EXPORT_DIR = "Export/";
 
-	public static final String RTABMAP_AUTH_TOKEN_KEY = "com.introlab.rtabmap.AUTH_TOKEN";
-	public static final String RTABMAP_FILENAME_KEY = "com.introlab.rtabmap.FILENAME";
-	public static final String RTABMAP_OPENED_DB_PATH_KEY = "com.introlab.rtabmap.OPENED_DB_PATH";
-	public static final String RTABMAP_WORKING_DIR_KEY = "com.introlab.rtabmap.WORKING_DIR";
+	public static final String RTABMAP_AUTH_TOKEN_KEY = "AUTH_TOKEN";
+	public static final String RTABMAP_FILENAME_KEY = "FILENAME";
+	public static final String RTABMAP_OPENED_DB_PATH_KEY = "OPENED_DB_PATH";
+	public static final String RTABMAP_WORKING_DIR_KEY = "WORKING_DIR";
 	public static final int SKETCHFAB_ACTIVITY_CODE = 999;
 	private String mAuthToken;
 
@@ -148,6 +154,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		STATE_VISUALIZING_CAMERA,     // Camera/Motion on  - Showing optimized mesh
 		STATE_VISUALIZING_WHILE_LOADING // Camera/Motion off - Loading data while showing optimized mesh
 	}
+
 	State mState = State.STATE_WELCOME;
 
 	// GLSurfaceView and renderer, all of the graphic content is rendered
@@ -261,35 +268,30 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	int mCameraDriver = 0;
 
 	//Tango Service connection.
-	boolean mCameraServiceConnectionUsed = false; 
+	boolean mCameraServiceConnectionUsed = false;
 	ServiceConnection mCameraServiceConnection = new ServiceConnection() {
 		public void onServiceConnected(ComponentName name, final IBinder service) {
 			Thread bindThread = new Thread(new Runnable() {
 				public void run() {
-					final boolean cameraStartSucess = com.introlab.rtabmap.RTABMapLib.startCamera(nativeApplication, service, getApplicationContext(), getActivity(), mCameraDriver);
+					final boolean cameraStartSucess = RTABMapLib.startCamera(nativeApplication, service, getApplicationContext(), getActivity(), mCameraDriver);
 					runOnUiThread(new Runnable() {
 						public void run() {
 							mProgressDialog.dismiss();
-							if(!cameraStartSucess)
-							{
-								mToast.makeText(getApplicationContext(), 
+							if (!cameraStartSucess) {
+								mToast.makeText(getApplicationContext(),
 										String.format("Failed to intialize Tango camera! RTAB-Map may not be built with Tango support."), mToast.LENGTH_LONG).show();
-								if(mCameraServiceConnectionUsed)
-								{
-									if(!DISABLE_LOG) Log.i(TAG, String.format("unbindService"));
+								if (mCameraServiceConnectionUsed) {
+									if (!DISABLE_LOG) Log.i(TAG, String.format("unbindService"));
 									getActivity().unbindService(mCameraServiceConnection);
 								}
 								mCameraServiceConnectionUsed = false;
-							}
-							else
-							{
-								updateState(mState==State.STATE_VISUALIZING?State.STATE_VISUALIZING_CAMERA:State.STATE_CAMERA);
-								if(mState==State.STATE_VISUALIZING_CAMERA && mItemLocalizationMode.isChecked())
-								{
-									com.introlab.rtabmap.RTABMapLib.setPausedMapping(nativeApplication, false);
+							} else {
+								updateState(mState == State.STATE_VISUALIZING ? State.STATE_VISUALIZING_CAMERA : State.STATE_CAMERA);
+								if (mState == State.STATE_VISUALIZING_CAMERA && mItemLocalizationMode.isChecked()) {
+									RTABMapLib.setPausedMapping(nativeApplication, false);
 								}
 							}
-						} 
+						}
 					});
 				}
 			});
@@ -299,7 +301,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		public void onServiceDisconnected(ComponentName name) {
 			// Handle this if you need to gracefully shutdown/retry
 			// in the event that Tango itself crashes/gets upgraded while running.
-			mToast.makeText(getApplicationContext(), 
+			mToast.makeText(getApplicationContext(),
 					String.format("Tango disconnected!"), mToast.LENGTH_LONG).show();
 		}
 	};
@@ -309,7 +311,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		super.onCreate(savedInstanceState);
 		setTitle(R.string.menu_name);
 
-		nativeApplication = com.introlab.rtabmap.RTABMapLib.createNativeApplication(this);
+		nativeApplication = RTABMapLib.createNativeApplication(this);
 
 		mFreeMemoryOnStart = getFreeMemory();
 
@@ -332,17 +334,17 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mActionBarHeight = getActionBarHeight();
 
 		// Buttons for selecting camera view and Set up button click listeners.
-		mButtonCameraView = (NDSpinner)findViewById(R.id.camera_button);
-		mButtonStart = (ImageButton)findViewById(R.id.start_button);
-		mButtonStop = (ImageButton)findViewById(R.id.stop_button);
-		mButtonLighting = (ToggleButton)findViewById(R.id.light_button);
-		mButtonWireframe = (ToggleButton)findViewById(R.id.wireframe_button);
-		mButtonBackfaceShown = (ToggleButton)findViewById(R.id.backface_button);
-		mButtonCloseVisualization = (Button)findViewById(R.id.close_visualization_button);
-		mButtonSaveOnDevice = (Button)findViewById(R.id.button_saveOnDevice);
-		mButtonShareOnSketchfab = (Button)findViewById(R.id.button_shareToSketchfab);
-		mButtonLibrary = (Button)findViewById(R.id.button_library);
-		mButtonNewScan = (Button)findViewById(R.id.button_new_scan);
+		mButtonCameraView = (NDSpinner) findViewById(R.id.camera_button);
+		mButtonStart = (ImageButton) findViewById(R.id.start_button);
+		mButtonStop = (ImageButton) findViewById(R.id.stop_button);
+		mButtonLighting = (ToggleButton) findViewById(R.id.light_button);
+		mButtonWireframe = (ToggleButton) findViewById(R.id.wireframe_button);
+		mButtonBackfaceShown = (ToggleButton) findViewById(R.id.backface_button);
+		mButtonCloseVisualization = (Button) findViewById(R.id.close_visualization_button);
+		mButtonSaveOnDevice = (Button) findViewById(R.id.button_saveOnDevice);
+		mButtonShareOnSketchfab = (Button) findViewById(R.id.button_shareToSketchfab);
+		mButtonLibrary = (Button) findViewById(R.id.button_library);
+		mButtonNewScan = (Button) findViewById(R.id.button_new_scan);
 		mButtonCameraView.setOnItemSelectedListener(this);
 		mButtonStart.setOnClickListener(this);
 		mButtonStop.setOnClickListener(this);
@@ -363,9 +365,8 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mButtonShareOnSketchfab.setVisibility(View.INVISIBLE);
 		mButtonLibrary.setVisibility(View.INVISIBLE);
 		mButtonNewScan.setVisibility(View.INVISIBLE);
-		if(mItemRenderingMesh != null && mItemRenderingTextureMesh != null)
-		{
-			mButtonBackfaceShown.setVisibility(mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked()?View.VISIBLE:View.INVISIBLE);
+		if (mItemRenderingMesh != null && mItemRenderingTextureMesh != null) {
+			mButtonBackfaceShown.setVisibility(mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked() ? View.VISIBLE : View.INVISIBLE);
 		}
 
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.camera_view_array, android.R.layout.simple_spinner_item);
@@ -379,13 +380,13 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			}
 		});
 
-		mSeekBarOrthoCut = (SeekBar)findViewById(R.id.seekBar_ortho_cut);
+		mSeekBarOrthoCut = (SeekBar) findViewById(R.id.seekBar_ortho_cut);
 		mSeekBarOrthoCut.setMax(120);
 		mSeekBarOrthoCut.setProgress(80);
 		mSeekBarOrthoCut.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progressValue, boolean fromUser) {
-				com.introlab.rtabmap.RTABMapLib.setOrthoCropFactor(nativeApplication, (float)(120-progressValue)/20.0f - 3.0f);
+				RTABMapLib.setOrthoCropFactor(nativeApplication, (float) (120 - progressValue) / 20.0f - 3.0f);
 				resetNoTouchTimer();
 			}
 
@@ -398,13 +399,13 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			}
 		});
 
-		mSeekBarGrid = (SeekBar)findViewById(R.id.seekBar_grid);
+		mSeekBarGrid = (SeekBar) findViewById(R.id.seekBar_grid);
 		mSeekBarGrid.setMax(180);
 		mSeekBarGrid.setProgress(90);
 		mSeekBarGrid.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progressValue, boolean fromUser) {
-				com.introlab.rtabmap.RTABMapLib.setGridRotation(nativeApplication, ((float)progressValue-90.0f)/2.0f);
+				RTABMapLib.setGridRotation(nativeApplication, ((float) progressValue - 90.0f) / 2.0f);
 				resetNoTouchTimer();
 			}
 
@@ -442,7 +443,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 				if (pointCount == 1) {
 					float normalizedX = event.getX(0) / mScreenSize.x;
 					float normalizedY = event.getY(0) / mScreenSize.y;
-					com.introlab.rtabmap.RTABMapLib.onTouchEvent(nativeApplication, 1,
+					RTABMapLib.onTouchEvent(nativeApplication, 1,
 							event.getActionMasked(), normalizedX, normalizedY, 0.0f, 0.0f);
 				}
 				if (pointCount == 2) {
@@ -450,14 +451,14 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 						int index = event.getActionIndex() == 0 ? 1 : 0;
 						float normalizedX = event.getX(index) / mScreenSize.x;
 						float normalizedY = event.getY(index) / mScreenSize.y;
-						com.introlab.rtabmap.RTABMapLib.onTouchEvent(nativeApplication, 1,
+						RTABMapLib.onTouchEvent(nativeApplication, 1,
 								MotionEvent.ACTION_DOWN, normalizedX, normalizedY, 0.0f, 0.0f);
 					} else {
 						float normalizedX0 = event.getX(0) / mScreenSize.x;
 						float normalizedY0 = event.getY(0) / mScreenSize.y;
 						float normalizedX1 = event.getX(1) / mScreenSize.x;
 						float normalizedY1 = event.getY(1) / mScreenSize.y;
-						com.introlab.rtabmap.RTABMapLib.onTouchEvent(nativeApplication, 2, event.getActionMasked(),
+						RTABMapLib.onTouchEvent(nativeApplication, 2, event.getActionMasked(),
 								normalizedX0, normalizedY0, normalizedX1, normalizedY1);
 					}
 				}
@@ -484,7 +485,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mExportProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
-				com.introlab.rtabmap.RTABMapLib.cancelProcessing(nativeApplication);
+				RTABMapLib.cancelProcessing(nativeApplication);
 
 				mProgressDialog.setTitle("");
 				mProgressDialog.setMessage(String.format("Cancelling..."));
@@ -496,21 +497,18 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mWorkingDirectory = "";
 		mWorkingDirectoryHuman = "";
 		mTotalLoopClosures = 0;
-		mLastFastMovementNotificationStamp = System.currentTimeMillis()/1000;
+		mLastFastMovementNotificationStamp = System.currentTimeMillis() / 1000;
 
-		if(Environment.getExternalStorageState().compareTo(Environment.MEDIA_MOUNTED)==0)
-		{
+		if (Environment.getExternalStorageState().compareTo(Environment.MEDIA_MOUNTED) == 0) {
 			File extStore = Environment.getExternalStorageDirectory();
 			mWorkingDirectory = extStore.getAbsolutePath() + "/" + getString(R.string.app_name) + "/";
 			extStore = new File(mWorkingDirectory);
 			extStore.mkdirs();
 			mWorkingDirectoryHuman = RTABMAP_SDCARD_PATH + getString(R.string.app_name) + "/";
-		}
-		else
-		{
+		} else {
 			// show warning that data cannot be saved!
-			mToast.makeText(getApplicationContext(), 
-					String.format("Failed to get external storage path (SD-CARD, state=%s). Saving disabled.", 
+			mToast.makeText(getApplicationContext(),
+					String.format("Failed to get external storage path (SD-CARD, state=%s). Saving disabled.",
 							Environment.getExternalStorageState()), mToast.LENGTH_LONG).show();
 		}
 
@@ -532,7 +530,8 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 				}
 
 				@Override
-				public void onDisplayRemoved(int displayId) {}
+				public void onDisplayRemoved(int displayId) {
+				}
 			}, null);
 		}
 
@@ -543,23 +542,27 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mLocationListener = new LocationListener() {
 			public void onLocationChanged(Location location) {
 				mLastKnownLocation = location;
-				double stamp = location.getTime()/1000.0;
-				if(!DISABLE_LOG) Log.d(TAG, String.format("GPS received at %f (%d)", stamp, location.getTime()));
-				com.introlab.rtabmap.RTABMapLib.setGPS(
-						nativeApplication, 
+				double stamp = location.getTime() / 1000.0;
+				if (!DISABLE_LOG)
+					Log.d(TAG, String.format("GPS received at %f (%d)", stamp, location.getTime()));
+				RTABMapLib.setGPS(
+						nativeApplication,
 						stamp,
-						(double)location.getLongitude(), 
-						(double)location.getLatitude(), 
-						(double)location.getAltitude(),  
-						(double)location.getAccuracy(),
-						(double)mCompassDeg);
+						(double) location.getLongitude(),
+						(double) location.getLatitude(),
+						(double) location.getAltitude(),
+						(double) location.getAccuracy(),
+						(double) mCompassDeg);
 			}
 
-			public void onStatusChanged(String provider, int status, Bundle extras) {}
+			public void onStatusChanged(String provider, int status, Bundle extras) {
+			}
 
-			public void onProviderEnabled(String provider) {}
+			public void onProviderEnabled(String provider) {
+			}
 
-			public void onProviderDisabled(String provider) {}
+			public void onProviderDisabled(String provider) {
+			}
 		};
 
 		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -569,95 +572,76 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mAmbientLight = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
 		mAmbientAirPressure = mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
 		mAmbientRelativeHumidity = mSensorManager.getDefaultSensor(Sensor.TYPE_RELATIVE_HUMIDITY);
-		float [] values = {1,0,0,0,0,1,0,-1,0};
+		float[] values = {1, 0, 0, 0, 0, 1, 0, -1, 0};
 		mDeviceToCamera.setValues(values);
-		mWifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+		mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
 		setCamera(1);
 
-		DISABLE_LOG =  !( 0 != ( getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE ) );
+		DISABLE_LOG = !(0 != (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE));
 
 		if (!PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 			PermissionHelper.requestPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-		}
-		else
-		{
+		} else {
 			postCreate();
 		}
 
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 		String cameraDriverStr = sharedPref.getString(getString(R.string.pref_key_camera_driver), getString(R.string.pref_default_camera_driver));
 		mCameraDriver = Integer.parseInt(cameraDriverStr);
-		
+
 		isArCoreAvailable();
 		isArEngineAvailable();
 	}
-	
+
 	// Should be called only if read/write permissions are granted!
-	private void postCreate()
-	{
+	private void postCreate() {
 		Log.i(TAG, "postCreate()");
-		
-		String tmpDatabase = mWorkingDirectory+RTABMAP_TMP_DB;
+
+		String tmpDatabase = mWorkingDirectory + RTABMAP_TMP_DB;
 		(new File(tmpDatabase)).delete();
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 		boolean databaseInMemory = sharedPref.getBoolean(getString(R.string.pref_key_db_in_memory), Boolean.parseBoolean(getString(R.string.pref_default_db_in_memory)));
-		com.introlab.rtabmap.RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
-		
-		final String[] files = com.introlab.rtabmap.Util.loadFileList(mWorkingDirectory, true);
-		if(files.length == 0)
-		{
+		RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
+
+		final String[] files = Util.loadFileList(mWorkingDirectory, true);
+		if (files.length == 0) {
 			mButtonLibrary.setVisibility(View.INVISIBLE);
 		}
 	}
-	
-	private void updateCameraDriverSettings()
-	{		
-		Log.i(TAG, String.format("updateCameraDriverSettings() mCameraDriver=%d RTABMapLib.isBuiltWith(%d)=%d", mCameraDriver, mCameraDriver, com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, mCameraDriver)?1:0));
-		
+
+	private void updateCameraDriverSettings() {
+		Log.i(TAG, String.format("updateCameraDriverSettings() mCameraDriver=%d RTABMapLib.isBuiltWith(%d)=%d", mCameraDriver, mCameraDriver, RTABMapLib.isBuiltWith(nativeApplication, mCameraDriver) ? 1 : 0));
+
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-		
-		if(mCameraDriver == 0 && (!CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) || !com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 0)))
-		{
-			if(mIsAREngineAvailable && com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 2))
-			{		
+
+		if (mCameraDriver == 0 && (!CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) || !RTABMapLib.isBuiltWith(nativeApplication, 0))) {
+			if (mIsAREngineAvailable && RTABMapLib.isBuiltWith(nativeApplication, 2)) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "2");
 				editor.commit();
-			}
-			else if(mIsARCoreAvailable)
-			{		
+			} else if (mIsARCoreAvailable) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "3");
 				editor.commit();
 			}
-		}
-		else if(((mCameraDriver == 1 && (!com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 0) || !mIsARCoreAvailable)) ||
-				 (mCameraDriver == 3 && !mIsARCoreAvailable)))
-		{
-			if(CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) && com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 0))
-			{		
+		} else if (((mCameraDriver == 1 && (!RTABMapLib.isBuiltWith(nativeApplication, 0) || !mIsARCoreAvailable)) ||
+				(mCameraDriver == 3 && !mIsARCoreAvailable))) {
+			if (CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) && RTABMapLib.isBuiltWith(nativeApplication, 0)) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "0");
 				editor.commit();
-			}
-			else if(mIsAREngineAvailable && com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 2))
-			{		
+			} else if (mIsAREngineAvailable && RTABMapLib.isBuiltWith(nativeApplication, 2)) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "2");
 				editor.commit();
 			}
-		}
-		else if(mCameraDriver == 2 && (!mIsAREngineAvailable || !com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 2)))
-		{
-			if(CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) && com.introlab.rtabmap.RTABMapLib.isBuiltWith(nativeApplication, 0))
-			{		
+		} else if (mCameraDriver == 2 && (!mIsAREngineAvailable || !RTABMapLib.isBuiltWith(nativeApplication, 2))) {
+			if (CheckTangoCoreVersion(MIN_TANGO_CORE_VERSION) && RTABMapLib.isBuiltWith(nativeApplication, 0)) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "0");
 				editor.commit();
-			}
-			else if(mIsARCoreAvailable)
-			{		
+			} else if (mIsARCoreAvailable) {
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_camera_driver), "3");
 				editor.commit();
@@ -708,9 +692,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 				mIsAREngineAvailable = false;
 				updateCameraDriverSettings();
 			}
-		}
-		catch(UnsatisfiedLinkError e)
-		{
+		} catch (UnsatisfiedLinkError e) {
 			Log.i(TAG, "AREngine not supported");
 			mIsAREngineAvailable = false;
 		}
@@ -721,18 +703,17 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	public void onDestroy() {
 		super.onDestroy();
 
-		if(!DISABLE_LOG) Log.d(TAG, "onDestroy()");
+		if (!DISABLE_LOG) Log.d(TAG, "onDestroy()");
 		// Synchronized to avoid racing onDrawFrame.
 		synchronized (this) {
-			com.introlab.rtabmap.RTABMapLib.destroyNativeApplication(nativeApplication);
+			RTABMapLib.destroyNativeApplication(nativeApplication);
 			nativeApplication = 0;
 		}
 	}
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		if(event.sensor == mAccelerometer || event.sensor == mMagnetometer)
-		{
+		if (event.sensor == mAccelerometer || event.sensor == mMagnetometer) {
 			if (event.sensor == mAccelerometer) {
 				System.arraycopy(event.values, 0, mLastAccelerometer, 0, event.values.length);
 				mLastAccelerometerSet = true;
@@ -743,39 +724,30 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			if (mLastAccelerometerSet && mLastMagnetometerSet) {
 				SensorManager.getRotationMatrix(mR, null, mLastAccelerometer, mLastMagnetometer);
 				mRMat.setValues(mR);
-				mNewR.setConcat(mRMat, mDeviceToCamera) ;
+				mNewR.setConcat(mRMat, mDeviceToCamera);
 				mNewR.getValues(mR);
-				SensorManager.getOrientation(mR, mOrientation);                 
-				mCompassDeg = mOrientation[0] * 180.0f/(float)Math.PI;
-				if(mCompassDeg<0.0f)
-				{
+				SensorManager.getOrientation(mR, mOrientation);
+				mCompassDeg = mOrientation[0] * 180.0f / (float) Math.PI;
+				if (mCompassDeg < 0.0f) {
 					mCompassDeg += 360.0f;
 				}
 			}
-		}
-		else if(event.sensor == mAmbientTemperature)
-		{
+		} else if (event.sensor == mAmbientTemperature) {
 			mLastEnvSensors[1] = event.values[0];
 			mLastEnvSensorsSet[1] = true;
-			com.introlab.rtabmap.RTABMapLib.addEnvSensor(nativeApplication, 2, event.values[0]);
-		}
-		else if(event.sensor == mAmbientAirPressure)
-		{
+			RTABMapLib.addEnvSensor(nativeApplication, 2, event.values[0]);
+		} else if (event.sensor == mAmbientAirPressure) {
 			mLastEnvSensors[2] = event.values[0];
 			mLastEnvSensorsSet[2] = true;
-			com.introlab.rtabmap.RTABMapLib.addEnvSensor(nativeApplication, 3, event.values[0]);
-		}
-		else if(event.sensor == mAmbientLight)
-		{
+			RTABMapLib.addEnvSensor(nativeApplication, 3, event.values[0]);
+		} else if (event.sensor == mAmbientLight) {
 			mLastEnvSensors[3] = event.values[0];
 			mLastEnvSensorsSet[3] = true;
-			com.introlab.rtabmap.RTABMapLib.addEnvSensor(nativeApplication, 4, event.values[0]);
-		}
-		else if(event.sensor == mAmbientRelativeHumidity)
-		{
+			RTABMapLib.addEnvSensor(nativeApplication, 4, event.values[0]);
+		} else if (event.sensor == mAmbientRelativeHumidity) {
 			mLastEnvSensors[4] = event.values[0];
 			mLastEnvSensorsSet[4] = true;
-			com.introlab.rtabmap.RTABMapLib.addEnvSensor(nativeApplication, 5, event.values[0]);
+			RTABMapLib.addEnvSensor(nativeApplication, 5, event.values[0]);
 		}
 	}
 
@@ -793,12 +765,12 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		}
 		return result;
 	}
+
 	public int getActionBarHeight() {
 		int result = 0;
 		TypedValue tv = new TypedValue();
-		if (getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true))
-		{
-			result = TypedValue.complexToDimensionPixelSize(tv.data,getResources().getDisplayMetrics());
+		if (getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+			result = TypedValue.complexToDimensionPixelSize(tv.data, getResources().getDisplayMetrics());
 		}
 
 		return result;
@@ -809,9 +781,8 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 		super.onWindowFocusChanged(hasFocus);
 
-		if(!mHudVisible)
-		{
-			mRenderer.setOffset(!hasFocus?-mStatusBarHeight:0);
+		if (!mHudVisible) {
+			mRenderer.setOffset(!hasFocus ? -mStatusBarHeight : 0);
 		}
 	}
 
@@ -821,15 +792,13 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 				| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
 				| View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
 		if (!visible) {
-			newVis |= View.SYSTEM_UI_FLAG_LOW_PROFILE 
+			newVis |= View.SYSTEM_UI_FLAG_LOW_PROFILE
 					| View.SYSTEM_UI_FLAG_FULLSCREEN       // hide status bar
 					| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION  // hide nav bar
-					| View.SYSTEM_UI_FLAG_IMMERSIVE; 
-			mRenderer.setOffset(!hasWindowFocus()?-mStatusBarHeight:0);
-		}
-		else
-		{
-			mRenderer.setOffset(-mStatusBarHeight-mActionBarHeight);
+					| View.SYSTEM_UI_FLAG_IMMERSIVE;
+			mRenderer.setOffset(!hasWindowFocus() ? -mStatusBarHeight : 0);
+		} else {
+			mRenderer.setOffset(-mStatusBarHeight - mActionBarHeight);
 		}
 
 		// Set the new desired visibility.
@@ -839,13 +808,13 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		// Check which request we're responding to
+		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
 			// Make sure the request was successful
 			if (resultCode == RESULT_CANCELED) {
 				mToast.makeText(this, "Motion Tracking Permissions Required!", mToast.LENGTH_SHORT).show();
 			}
-		}
-		else if (requestCode == SKETCHFAB_ACTIVITY_CODE) {
+		} else if (requestCode == SKETCHFAB_ACTIVITY_CODE) {
 			// Make sure the request was successful
 			if (resultCode == RESULT_OK) {
 				mAuthToken = data.getStringExtra(RTABMAP_AUTH_TOKEN_KEY);
@@ -870,29 +839,19 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		Date t = new Date();
 		boolean doubleBack = t.getTime() - mBackClickedTime.getTime() < 3500; // mToast.LENGTH_LONG
 		mBackClickedTime = t;
-		if(mState == State.STATE_MAPPING)
-		{
+		if (mState == State.STATE_MAPPING) {
 			stopMapping();
-		}
-		else if(mState == State.STATE_CAMERA || mState == State.STATE_VISUALIZING_CAMERA)
-		{
+		} else if (mState == State.STATE_CAMERA || mState == State.STATE_VISUALIZING_CAMERA) {
 			stopCamera();
-		}
-		else if(mState == State.STATE_IDLE || mState == State.STATE_WELCOME)
-		{
-			if(doubleBack)
-			{
+		} else if (mState == State.STATE_IDLE || mState == State.STATE_WELCOME) {
+			if (doubleBack) {
 				super.onBackPressed();
-			}
-			else
-			{
+			} else {
 				mToast.makeText(this, "Press Back once more to exit", mToast.LENGTH_LONG).show();
 			}
-		}
-		else if(mState == State.STATE_VISUALIZING)
-		{
+		} else if (mState == State.STATE_VISUALIZING) {
 			closeVisualization();
-			com.introlab.rtabmap.RTABMapLib.postExportation(nativeApplication, false);
+			RTABMapLib.postExportation(nativeApplication, false);
 		}
 	}
 
@@ -902,35 +861,31 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mGLView.onPause();
 		stopDisconnectTimer();
 
-		if(!DISABLE_LOG) Log.i(TAG, "onPause()");
+		if (!DISABLE_LOG) Log.i(TAG, "onPause()");
 		mOnPause = true;
 
-		if(mState == State.STATE_VISUALIZING_CAMERA)
-		{
+		if (mState == State.STATE_VISUALIZING_CAMERA) {
 			stopCamera();
-		}
-		else if(mState == State.STATE_MAPPING || mState == State.STATE_CAMERA)
-		{
+		} else if (mState == State.STATE_MAPPING || mState == State.STATE_CAMERA) {
 			stopMapping();
 		}
 
 		mLocationManager.removeUpdates(mLocationListener);
 		mSensorManager.unregisterListener(this);
 		mLastAccelerometerSet = false;
-		mLastMagnetometerSet= false;
-		mLastEnvSensorsSet[0] = mLastEnvSensorsSet[1]= mLastEnvSensorsSet[2]= mLastEnvSensorsSet[3]= mLastEnvSensorsSet[4]=false;
+		mLastMagnetometerSet = false;
+		mLastEnvSensorsSet[0] = mLastEnvSensorsSet[1] = mLastEnvSensorsSet[2] = mLastEnvSensorsSet[3] = mLastEnvSensorsSet[4] = false;
 
 		// This deletes OpenGL context!
 		mGLView.onPause();
 
-		mOnPauseStamp = System.currentTimeMillis()/1000;
+		mOnPauseStamp = System.currentTimeMillis() / 1000;
 	}
 
-	private void updatePreferences()
-	{
+	@SuppressLint("MissingPermission")
+	private void updatePreferences() {
 		// update preferences
-		try
-		{
+		try {
 			Log.i(TAG, "update preferences...");
 			SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 			mUpdateRate = sharedPref.getString(getString(R.string.pref_key_update_rate), getString(R.string.pref_default_update_rate));
@@ -942,9 +897,8 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			mMinInliers = sharedPref.getString(getString(R.string.pref_key_min_inliers), getString(R.string.pref_default_min_inliers));
 			mMaxOptimizationError = sharedPref.getString(getString(R.string.pref_key_opt_error), getString(R.string.pref_default_opt_error));
 			float maxOptimizationError = Float.parseFloat(mMaxOptimizationError);
-			if(maxOptimizationError >0 && maxOptimizationError<1) 
-			{
-				Log.w(TAG, "Migration of " + getString(R.string.pref_key_opt_error) + " from " + mMaxOptimizationError + " to " + getString(R.string.pref_default_opt_error)) ;
+			if (maxOptimizationError > 0 && maxOptimizationError < 1) {
+				Log.w(TAG, "Migration of " + getString(R.string.pref_key_opt_error) + " from " + mMaxOptimizationError + " to " + getString(R.string.pref_default_opt_error));
 				SharedPreferences.Editor editor = sharedPref.edit();
 				editor.putString(getString(R.string.pref_key_opt_error), getString(R.string.pref_default_opt_error));
 				editor.commit();
@@ -959,8 +913,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			String markerDetection = sharedPref.getString(getString(R.string.pref_key_marker_detection), getString(R.string.pref_default_marker_detection));
 			String markerDetectionDepthError = sharedPref.getString(getString(R.string.pref_key_marker_detection_depth_error), getString(R.string.pref_default_marker_detection_depth_error));
 			mGPSSaved = PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) && sharedPref.getBoolean(getString(R.string.pref_key_gps_saved), Boolean.parseBoolean(getString(R.string.pref_default_gps_saved)));
-			if(mGPSSaved)
-			{
+			if (mGPSSaved) {
 				mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mLocationListener);
 				mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
 				mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_UI);
@@ -982,7 +935,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 						{
 							mLastEnvSensors[0] = (float)dbm;
 							mLastEnvSensorsSet[0] = true;
-							com.introlab.rtabmap.RTABMapLib.addEnvSensor(nativeApplication, 1, mLastEnvSensors[0]);
+							RTABMapLib.addEnvSensor(nativeApplication, 1, mLastEnvSensors[0]);
 						}
 					}
 		
@@ -990,57 +943,57 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			}
 		
 			Log.i(TAG, "set mapping parameters");
-			com.introlab.rtabmap.RTABMapLib.setOnlineBlending(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_blending), Boolean.parseBoolean(getString(R.string.pref_default_blending))));
-			com.introlab.rtabmap.RTABMapLib.setNodesFiltering(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_nodes_filtering), Boolean.parseBoolean(getString(R.string.pref_default_nodes_filtering))));
-			com.introlab.rtabmap.RTABMapLib.setRawScanSaved(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_raw_scan_saved), Boolean.parseBoolean(getString(R.string.pref_default_raw_scan_saved))));
-			com.introlab.rtabmap.RTABMapLib.setFullResolution(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_resolution), Boolean.parseBoolean(getString(R.string.pref_default_resolution))));
-			com.introlab.rtabmap.RTABMapLib.setSmoothing(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_smoothing), Boolean.parseBoolean(getString(R.string.pref_default_smoothing))));
-			com.introlab.rtabmap.RTABMapLib.setDepthFromMotion(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_depth_from_motion), Boolean.parseBoolean(getString(R.string.pref_default_depth_from_motion))));
-			com.introlab.rtabmap.RTABMapLib.setCameraColor(nativeApplication, !sharedPref.getBoolean(getString(R.string.pref_key_fisheye), Boolean.parseBoolean(getString(R.string.pref_default_fisheye))));
-			com.introlab.rtabmap.RTABMapLib.setAppendMode(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_append), Boolean.parseBoolean(getString(R.string.pref_default_append))));
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/DetectionRate", mUpdateRate);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/TimeThr", mTimeThr);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/MemoryThr", memThr);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/LinearSpeedUpdate", maxSpeed);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/AngularSpeedUpdate", String.valueOf(Float.parseFloat(maxSpeed)/2.0f));
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Mem/RehearsalSimilarity", simThr);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Kp/MaxFeatures", mMaxFeatures);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Vis/MaxFeatures", maxFeaturesLoop);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Vis/MinInliers", mMinInliers);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/LoopThr", mLoopThr);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/OptimizeMaxError", mMaxOptimizationError);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Kp/DetectorStrategy", featureType);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Vis/FeatureType", featureType);
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Mem/NotLinkedNodesKept", String.valueOf(keepAllDb));
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/OptimizeFromGraphEnd", String.valueOf(optimizeFromGraphEnd));
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Optimizer/Strategy", optimizer);
+			RTABMapLib.setOnlineBlending(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_blending), Boolean.parseBoolean(getString(R.string.pref_default_blending))));
+			RTABMapLib.setNodesFiltering(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_nodes_filtering), Boolean.parseBoolean(getString(R.string.pref_default_nodes_filtering))));
+			RTABMapLib.setRawScanSaved(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_raw_scan_saved), Boolean.parseBoolean(getString(R.string.pref_default_raw_scan_saved))));
+			RTABMapLib.setFullResolution(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_resolution), Boolean.parseBoolean(getString(R.string.pref_default_resolution))));
+			RTABMapLib.setSmoothing(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_smoothing), Boolean.parseBoolean(getString(R.string.pref_default_smoothing))));
+			RTABMapLib.setDepthFromMotion(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_depth_from_motion), Boolean.parseBoolean(getString(R.string.pref_default_depth_from_motion))));
+			RTABMapLib.setCameraColor(nativeApplication, !sharedPref.getBoolean(getString(R.string.pref_key_fisheye), Boolean.parseBoolean(getString(R.string.pref_default_fisheye))));
+			RTABMapLib.setAppendMode(nativeApplication, sharedPref.getBoolean(getString(R.string.pref_key_append), Boolean.parseBoolean(getString(R.string.pref_default_append))));
+			RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/DetectionRate", mUpdateRate);
+			RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/TimeThr", mTimeThr);
+			RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/MemoryThr", memThr);
+			RTABMapLib.setMappingParameter(nativeApplication, "RGBD/LinearSpeedUpdate", maxSpeed);
+			RTABMapLib.setMappingParameter(nativeApplication, "RGBD/AngularSpeedUpdate", String.valueOf(Float.parseFloat(maxSpeed)/2.0f));
+			RTABMapLib.setMappingParameter(nativeApplication, "Mem/RehearsalSimilarity", simThr);
+			RTABMapLib.setMappingParameter(nativeApplication, "Kp/MaxFeatures", mMaxFeatures);
+			RTABMapLib.setMappingParameter(nativeApplication, "Vis/MaxFeatures", maxFeaturesLoop);
+			RTABMapLib.setMappingParameter(nativeApplication, "Vis/MinInliers", mMinInliers);
+			RTABMapLib.setMappingParameter(nativeApplication, "Rtabmap/LoopThr", mLoopThr);
+			RTABMapLib.setMappingParameter(nativeApplication, "RGBD/OptimizeMaxError", mMaxOptimizationError);
+			RTABMapLib.setMappingParameter(nativeApplication, "Kp/DetectorStrategy", featureType);
+			RTABMapLib.setMappingParameter(nativeApplication, "Vis/FeatureType", featureType);
+			RTABMapLib.setMappingParameter(nativeApplication, "Mem/NotLinkedNodesKept", String.valueOf(keepAllDb));
+			RTABMapLib.setMappingParameter(nativeApplication, "RGBD/OptimizeFromGraphEnd", String.valueOf(optimizeFromGraphEnd));
+			RTABMapLib.setMappingParameter(nativeApplication, "Optimizer/Strategy", optimizer);
 			if(Integer.parseInt(markerDetection) == -1)
 			{
-				com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/MarkerDetection", "false");
+				RTABMapLib.setMappingParameter(nativeApplication, "RGBD/MarkerDetection", "false");
 			}
 			else
 			{
-				com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "RGBD/MarkerDetection", "true");
-				com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Marker/Dictionary", markerDetection);
-				com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Marker/CornerRefinementMethod", Integer.parseInt(markerDetection) > 16?"3":"0");
+				RTABMapLib.setMappingParameter(nativeApplication, "RGBD/MarkerDetection", "true");
+				RTABMapLib.setMappingParameter(nativeApplication, "Marker/Dictionary", markerDetection);
+				RTABMapLib.setMappingParameter(nativeApplication, "Marker/CornerRefinementMethod", Integer.parseInt(markerDetection) > 16?"3":"0");
 			}
-			com.introlab.rtabmap.RTABMapLib.setMappingParameter(nativeApplication, "Marker/MaxDepthError", markerDetectionDepthError);
+			RTABMapLib.setMappingParameter(nativeApplication, "Marker/MaxDepthError", markerDetectionDepthError);
 		
 			Log.i(TAG, "set exporting parameters...");
-			com.introlab.rtabmap.RTABMapLib.setCloudDensityLevel(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_density), getString(R.string.pref_default_density))));
-			com.introlab.rtabmap.RTABMapLib.setMaxCloudDepth(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_depth), getString(R.string.pref_default_depth))));
-			com.introlab.rtabmap.RTABMapLib.setMinCloudDepth(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_min_depth), getString(R.string.pref_default_min_depth))));
-			com.introlab.rtabmap.RTABMapLib.setPointSize(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_point_size), getString(R.string.pref_default_point_size))));
-			com.introlab.rtabmap.RTABMapLib.setMeshAngleTolerance(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_angle), getString(R.string.pref_default_angle))));
-			com.introlab.rtabmap.RTABMapLib.setMeshTriangleSize(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_triangle), getString(R.string.pref_default_triangle))));
+			RTABMapLib.setCloudDensityLevel(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_density), getString(R.string.pref_default_density))));
+			RTABMapLib.setMaxCloudDepth(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_depth), getString(R.string.pref_default_depth))));
+			RTABMapLib.setMinCloudDepth(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_min_depth), getString(R.string.pref_default_min_depth))));
+			RTABMapLib.setPointSize(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_point_size), getString(R.string.pref_default_point_size))));
+			RTABMapLib.setMeshAngleTolerance(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_angle), getString(R.string.pref_default_angle))));
+			RTABMapLib.setMeshTriangleSize(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_triangle), getString(R.string.pref_default_triangle))));
 			float bgColor = Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_background_color), getString(R.string.pref_default_background_color)));
-			com.introlab.rtabmap.RTABMapLib.setBackgroundColor(nativeApplication, bgColor);
+			RTABMapLib.setBackgroundColor(nativeApplication, bgColor);
 			mRenderer.setTextColor(bgColor>=0.6f?0.0f:1.0f);
 		
 			 Log.i(TAG, "set rendering parameters...");
-			com.introlab.rtabmap.RTABMapLib.setClusterRatio(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_cluster_ratio), getString(R.string.pref_default_cluster_ratio))));
-			com.introlab.rtabmap.RTABMapLib.setMaxGainRadius(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_gain_max_radius), getString(R.string.pref_default_gain_max_radius))));
-			com.introlab.rtabmap.RTABMapLib.setRenderingTextureDecimation(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_rendering_texture_decimation), getString(R.string.pref_default_rendering_texture_decimation))));
+			RTABMapLib.setClusterRatio(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_cluster_ratio), getString(R.string.pref_default_cluster_ratio))));
+			RTABMapLib.setMaxGainRadius(nativeApplication, Float.parseFloat(sharedPref.getString(getString(R.string.pref_key_gain_max_radius), getString(R.string.pref_default_gain_max_radius))));
+			RTABMapLib.setRenderingTextureDecimation(nativeApplication, Integer.parseInt(sharedPref.getString(getString(R.string.pref_key_rendering_texture_decimation), getString(R.string.pref_default_rendering_texture_decimation))));
 		
 			if(mItemRenderingPointCloud != null)
 			{
@@ -1057,7 +1010,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 				{
 					mItemRenderingTextureMesh.setChecked(true);
 				}
-				com.introlab.rtabmap.RTABMapLib.setMeshRendering(
+				RTABMapLib.setMeshRendering(
 						nativeApplication, 
 						mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked(), 
 						mItemRenderingTextureMesh.isChecked());
@@ -1111,6 +1064,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
 
+		super.onRequestPermissionsResult(requestCode, permissions, results);
 		switch (requestCode) {
 			case PermissionHelper.WRITE_EXTERNAL_STORAGE_CODE: {
 				// If request is cancelled, the result arrays are empty.
@@ -1188,7 +1142,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			}
 			else
 			{
-				mCameraServiceConnectionUsed = com.introlab.rtabmap.TangoInitializationHelper.bindTangoService(getActivity(), mCameraServiceConnection);
+				mCameraServiceConnectionUsed = TangoInitializationHelper.bindTangoService(getActivity(), mCameraServiceConnection);
 				if(mCameraServiceConnectionUsed)
 				{
 					mProgressDialog.setTitle("");
@@ -1227,12 +1181,12 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 					
 					if(mCameraDriver==1 && !depthFromMotion)
 					{
-						com.introlab.rtabmap.RTABMapLib.setMeshRendering(
+						RTABMapLib.setMeshRendering(
 								nativeApplication, 
 								mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked(), 
 								mItemRenderingTextureMesh.isChecked());
 					}
-					final boolean cameraStartSucess = com.introlab.rtabmap.RTABMapLib.startCamera(nativeApplication, null, getApplicationContext(), getActivity(), mCameraDriver);
+					final boolean cameraStartSucess = RTABMapLib.startCamera(nativeApplication, null, getApplicationContext(), getActivity(), mCameraDriver);
 					runOnUiThread(new Runnable() {
 						public void run() {	
 							boolean localSuccess = cameraStartSucess;
@@ -1258,7 +1212,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 										if((mState==State.STATE_IDLE || mState==State.STATE_WELCOME) && !mArCoreCamera.isDepthSupported())
 										{
 											mItemRenderingPointCloud.setChecked(true);
-											com.introlab.rtabmap.RTABMapLib.setMeshRendering(nativeApplication, false, false);
+											RTABMapLib.setMeshRendering(nativeApplication, false, false);
 											mToast.makeText(getApplicationContext(), "Depth camera not found, only poses and RGB images can be recorded.", mToast.LENGTH_LONG).show();
 										}
 									}
@@ -1280,7 +1234,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 								updateState(mState==State.STATE_VISUALIZING?State.STATE_VISUALIZING_CAMERA:State.STATE_CAMERA);	
 								if(mState==State.STATE_VISUALIZING_CAMERA && mItemLocalizationMode.isChecked())
 								{
-									com.introlab.rtabmap.RTABMapLib.setPausedMapping(nativeApplication, false);
+									RTABMapLib.setPausedMapping(nativeApplication, false);
 								}
 							}
 						} 
@@ -1305,7 +1259,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		mStatusTexts[2] = getString(R.string.free_memory)+String.valueOf(freeMemory);
 		updateStatusTexts();
 
-		com.introlab.rtabmap.RTABMapLib.setCamera(nativeApplication, type);
+		RTABMapLib.setCamera(nativeApplication, type);
 		mButtonCameraView.setSelection(type, true);
 		mSeekBarOrthoCut.setVisibility(type!=3?View.INVISIBLE:View.VISIBLE);
 		mSeekBarGrid.setVisibility(mSeekBarGrid.isEnabled() && type==3?View.VISIBLE:View.INVISIBLE);
@@ -1336,17 +1290,17 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			}
 			break;
 		case R.id.light_button:
-			com.introlab.rtabmap.RTABMapLib.setLighting(nativeApplication, mButtonLighting.isChecked());
+			RTABMapLib.setLighting(nativeApplication, mButtonLighting.isChecked());
 			break;
 		case R.id.backface_button:
-			com.introlab.rtabmap.RTABMapLib.setBackfaceCulling(nativeApplication, !mButtonBackfaceShown.isChecked());
+			RTABMapLib.setBackfaceCulling(nativeApplication, !mButtonBackfaceShown.isChecked());
 			break;
 		case R.id.wireframe_button:
-			com.introlab.rtabmap.RTABMapLib.setWireframe(nativeApplication, mButtonWireframe.isChecked());
+			RTABMapLib.setWireframe(nativeApplication, mButtonWireframe.isChecked());
 			break;
 		case R.id.close_visualization_button:
 			closeVisualization();
-			com.introlab.rtabmap.RTABMapLib.postExportation(nativeApplication, false);
+			RTABMapLib.postExportation(nativeApplication, false);
 			break;
 		case R.id.button_saveOnDevice:
 			saveOnDevice();
@@ -1398,7 +1352,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 		boolean fisheye = sharedPref.getBoolean(getString(R.string.pref_key_fisheye), Boolean.parseBoolean(getString(R.string.pref_default_fisheye)));
 		Camera.getCameraInfo(fisheye?1:0, colorCameraInfo);
-		com.introlab.rtabmap.RTABMapLib.setScreenRotation(nativeApplication, display.getRotation(), colorCameraInfo.orientation);
+		RTABMapLib.setScreenRotation(nativeApplication, display.getRotation(), colorCameraInfo.orientation);
 	}
 
 	class DoubleTapGestureDetector extends GestureDetector.SimpleOnGestureListener {
@@ -1408,7 +1362,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			if(!DISABLE_LOG) Log.i(TAG, "onDoubleTap");
 			float normalizedX = event.getX(0) / mScreenSize.x;
 			float normalizedY = event.getY(0) / mScreenSize.y;
-			com.introlab.rtabmap.RTABMapLib.onTouchEvent(nativeApplication, 3, event.getActionMasked(), normalizedX, normalizedY, 0.0f, 0.0f);
+			RTABMapLib.onTouchEvent(nativeApplication, 3, event.getActionMasked(), normalizedX, normalizedY, 0.0f, 0.0f);
 			return true;
 		}
 		@Override
@@ -1476,7 +1430,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			{
 				mItemRenderingTextureMesh.setChecked(true);
 			}
-			com.introlab.rtabmap.RTABMapLib.setMeshRendering(
+			RTABMapLib.setMeshRendering(
 					nativeApplication, 
 					mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked(), 
 					mItemRenderingTextureMesh.isChecked());
@@ -1992,7 +1946,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		updateState(State.STATE_PROCESSING);
 		Thread workingThread = new Thread(new Runnable() {
 			public void run() {
-				final int loopDetected = com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, -1);
+				final int loopDetected = RTABMapLib.postProcessing(nativeApplication, -1);
 				runOnUiThread(new Runnable() {
 					public void run() {
 						if(mExportProgressDialog.isShowing())
@@ -2232,7 +2186,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			mMemoryWarningDialog.dismiss();
 			mMemoryWarningDialog=null;
 		}
-		com.introlab.rtabmap.RTABMapLib.setPausedMapping(nativeApplication, false);
+		RTABMapLib.setPausedMapping(nativeApplication, false);
 		mLastFastMovementNotificationStamp = System.currentTimeMillis()/1000;
 
 		if(mItemDataRecorderMode.isChecked())
@@ -2253,7 +2207,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		else if(mMapNodes==0 && mItemLocalizationMode!=null && mItemLocalizationMode.isChecked())
 		{
 			mItemLocalizationMode.setChecked(false);
-			com.introlab.rtabmap.RTABMapLib.setLocalizationMode(nativeApplication, false);
+			RTABMapLib.setLocalizationMode(nativeApplication, false);
 			mToast.makeText(getActivity(), String.format("Disabled localization mode as the map is empty, now mapping..."), mToast.LENGTH_LONG).show();
 		}
 	}
@@ -2266,7 +2220,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 		if(mState == State.STATE_VISUALIZING_CAMERA)
 		{
-			com.introlab.rtabmap.RTABMapLib.setPausedMapping(nativeApplication, true);
+			RTABMapLib.setPausedMapping(nativeApplication, true);
 			updateState(State.STATE_VISUALIZING);
 		}
 		else
@@ -2293,7 +2247,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		Thread stopThread = new Thread(new Runnable() {
 			public void run() {
 				if(!DISABLE_LOG) Log.i(TAG, String.format("stopCamera()"));
-				com.introlab.rtabmap.RTABMapLib.stopCamera(nativeApplication);
+				RTABMapLib.stopCamera(nativeApplication);
 				if(mCameraServiceConnectionUsed)
 				{
 					if(!DISABLE_LOG) Log.i(TAG, String.format("unbindService"));
@@ -2333,9 +2287,9 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		Thread stopThread = new Thread(new Runnable() {
 			public void run() {
 				if(!DISABLE_LOG) Log.i(TAG, String.format("setPausedMapping()"));
-				com.introlab.rtabmap.RTABMapLib.setPausedMapping(nativeApplication, true);
+				RTABMapLib.setPausedMapping(nativeApplication, true);
 				if(!DISABLE_LOG) Log.i(TAG, String.format("stopCamera()"));
-				com.introlab.rtabmap.RTABMapLib.stopCamera(nativeApplication);
+				RTABMapLib.stopCamera(nativeApplication);
 				if(mCameraServiceConnectionUsed)
 				{
 					if(!DISABLE_LOG) Log.i(TAG, String.format("unbindService"));
@@ -2411,7 +2365,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			updateState(State.STATE_PROCESSING);
 			Thread workingThread = new Thread(new Runnable() {
 				public void run() {
-					final int loopDetected = com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 2);
+					final int loopDetected = RTABMapLib.postProcessing(nativeApplication, 2);
 					runOnUiThread(new Runnable() {
 						public void run() {
 							mProgressDialog.dismiss();
@@ -2439,7 +2393,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			updateState(State.STATE_PROCESSING);
 			Thread workingThread = new Thread(new Runnable() {
 				public void run() {
-					final int value = com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 0);
+					final int value = RTABMapLib.postProcessing(nativeApplication, 0);
 					runOnUiThread(new Runnable() {
 						public void run() {
 							mProgressDialog.dismiss();
@@ -2463,28 +2417,28 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			mProgressDialog.setTitle("Post-Processing");
 			mProgressDialog.setMessage(String.format("Noise filtering..."));
 			mProgressDialog.show();
-			com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 4);
+			RTABMapLib.postProcessing(nativeApplication, 4);
 		}
 		else if (itemId == R.id.gain_compensation_fast)
 		{		
 			mProgressDialog.setTitle("Post-Processing");
 			mProgressDialog.setMessage(String.format("Adjusting Colors (Fast)..."));
 			mProgressDialog.show();
-			com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 5);
+			RTABMapLib.postProcessing(nativeApplication, 5);
 		}
 		else if (itemId == R.id.gain_compensation_full)
 		{		
 			mProgressDialog.setTitle("Post-Processing");
 			mProgressDialog.setMessage(String.format("Adjusting Colors (Full)..."));
 			mProgressDialog.show();
-			com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 6);
+			RTABMapLib.postProcessing(nativeApplication, 6);
 		}
 		else if (itemId == R.id.bilateral_filtering)
 		{		
 			mProgressDialog.setTitle("Post-Processing");
 			mProgressDialog.setMessage(String.format("Mesh smoothing..."));
 			mProgressDialog.show();
-			com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 7);
+			RTABMapLib.postProcessing(nativeApplication, 7);
 		}
 		else if (itemId == R.id.sba)
 		{
@@ -2494,7 +2448,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 			Thread workingThread = new Thread(new Runnable() {
 				public void run() {
-					final int value = com.introlab.rtabmap.RTABMapLib.postProcessing(nativeApplication, 1);
+					final int value = RTABMapLib.postProcessing(nativeApplication, 1);
 					runOnUiThread(new Runnable() {
 						public void run() {
 							mProgressDialog.dismiss();
@@ -2525,7 +2479,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		else if(itemId == R.id.mesh || itemId == R.id.texture_mesh || itemId == R.id.point_cloud)
 		{
 			item.setChecked(true);
-			com.introlab.rtabmap.RTABMapLib.setMeshRendering(
+			RTABMapLib.setMeshRendering(
 					nativeApplication, 
 					mItemRenderingMesh.isChecked() || mItemRenderingTextureMesh.isChecked(), 
 					mItemRenderingTextureMesh.isChecked());
@@ -2546,40 +2500,40 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		else if(itemId == R.id.map_shown)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setMapCloudShown(nativeApplication, item.isChecked());
+			RTABMapLib.setMapCloudShown(nativeApplication, item.isChecked());
 		}
 		else if(itemId == R.id.odom_shown)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setOdomCloudShown(nativeApplication, item.isChecked());
+			RTABMapLib.setOdomCloudShown(nativeApplication, item.isChecked());
 		}
 		else if(itemId == R.id.localization_mode)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setLocalizationMode(nativeApplication, item.isChecked());
+			RTABMapLib.setLocalizationMode(nativeApplication, item.isChecked());
 		}
 		else if(itemId == R.id.trajectory_mode)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setTrajectoryMode(nativeApplication, item.isChecked());
+			RTABMapLib.setTrajectoryMode(nativeApplication, item.isChecked());
 			setCamera(item.isChecked()?2:1);
 		}
 		else if(itemId == R.id.graph_optimization)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setGraphOptimization(nativeApplication, item.isChecked());
+			RTABMapLib.setGraphOptimization(nativeApplication, item.isChecked());
 		}
 		else if(itemId == R.id.graph_visible)
 		{
 			item.setChecked(!item.isChecked());
-			com.introlab.rtabmap.RTABMapLib.setGraphVisible(nativeApplication, item.isChecked());
+			RTABMapLib.setGraphVisible(nativeApplication, item.isChecked());
 		}
 		else if(itemId == R.id.grid_visible)
 		{
 			item.setChecked(!item.isChecked());
 			mSeekBarGrid.setEnabled(item.isChecked());
 			mSeekBarGrid.setVisibility(mHudVisible && mSeekBarGrid.isEnabled()&&mButtonCameraView.getSelectedItemPosition() == 3?View.VISIBLE:View.INVISIBLE);
-			com.introlab.rtabmap.RTABMapLib.setGridVisible(nativeApplication, item.isChecked());
+			RTABMapLib.setGridVisible(nativeApplication, item.isChecked());
 		}
 		else if (itemId == R.id.save)
 		{
@@ -2623,13 +2577,13 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 							updateStatusTexts();
 
 							mItemDataRecorderMode.setChecked(!dataRecorderOldState);
-							com.introlab.rtabmap.RTABMapLib.setDataRecorderMode(nativeApplication, mItemDataRecorderMode.isChecked());
+							RTABMapLib.setDataRecorderMode(nativeApplication, mItemDataRecorderMode.isChecked());
 
 							mOpenedDatabasePath = "";
 							SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
 							boolean databaseInMemory = sharedPref.getBoolean(getString(R.string.pref_key_db_in_memory), Boolean.parseBoolean(getString(R.string.pref_default_db_in_memory)));
 							String tmpDatabase = mWorkingDirectory+RTABMAP_TMP_DB;
-							com.introlab.rtabmap.RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
+							RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
 
 							mItemLocalizationMode.setEnabled(!mItemDataRecorderMode.isChecked());		   
 
@@ -2784,7 +2738,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 		boolean databaseInMemory = sharedPref.getBoolean(getString(R.string.pref_key_db_in_memory), Boolean.parseBoolean(getString(R.string.pref_default_db_in_memory)));
 		String tmpDatabase = mWorkingDirectory+RTABMAP_TMP_DB;
-		com.introlab.rtabmap.RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
+		RTABMapLib.openDatabase(nativeApplication, tmpDatabase, databaseInMemory, false);
 
 		if(!(mState == State.STATE_CAMERA || mState ==State.STATE_MAPPING))
 		{
@@ -2796,7 +2750,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 	private void openDatabase()
 	{
-		final String[] files = com.introlab.rtabmap.Util.loadFileList(mWorkingDirectory, true);
+		final String[] files = Util.loadFileList(mWorkingDirectory, true);
 		if(files.length > 0)
 		{
 			String[] filesWithSize = new String[files.length];
@@ -3033,7 +2987,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 				final long startTime = System.currentTimeMillis()/1000;
 
-				final boolean success = com.introlab.rtabmap.RTABMapLib.exportMesh(
+				final boolean success = RTABMapLib.exportMesh(
 						nativeApplication, 
 						cloudVoxelSize,
 						regenerateCloud,
@@ -3101,10 +3055,10 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 								if(!optimizedCleanWhitePolygons)
 								{
 									mButtonLighting.setChecked(true);
-									com.introlab.rtabmap.RTABMapLib.setLighting(nativeApplication, true);
+									RTABMapLib.setLighting(nativeApplication, true);
 								}
 								updateState(State.STATE_VISUALIZING);
-								com.introlab.rtabmap.RTABMapLib.postExportation(nativeApplication, true);
+								RTABMapLib.postExportation(nativeApplication, true);
 								if(mButtonCameraView.getSelectedItemPosition() == 0)
 								{
 									setCamera(2);
@@ -3236,7 +3190,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 		updateState(State.STATE_PROCESSING);
 		Thread saveThread = new Thread(new Runnable() {
 			public void run() {
-				com.introlab.rtabmap.RTABMapLib.save(nativeApplication, newDatabasePath); // save
+				RTABMapLib.save(nativeApplication, newDatabasePath); // save
 				runOnUiThread(new Runnable() {
 					public void run() {
 						String msg;
@@ -3384,7 +3338,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 				File tmpDir = new File(mWorkingDirectory + RTABMAP_TMP_DIR);
 				tmpDir.mkdirs();
-				String[] fileNames = com.introlab.rtabmap.Util.loadFileList(mWorkingDirectory + RTABMAP_TMP_DIR, false);
+				String[] fileNames = Util.loadFileList(mWorkingDirectory + RTABMAP_TMP_DIR, false);
 				if(!DISABLE_LOG) Log.i(TAG, String.format("Deleting %d files in \"%s\"", fileNames.length, mWorkingDirectory + RTABMAP_TMP_DIR));
 				for(int i=0; i<fileNames.length; ++i)
 				{
@@ -3403,9 +3357,9 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 				final String pathHuman = mWorkingDirectoryHuman + RTABMAP_EXPORT_DIR + fileName + ".zip";
 				final String zipOutput = mWorkingDirectory+RTABMAP_EXPORT_DIR+fileName+".zip";
-				if(com.introlab.rtabmap.RTABMapLib.writeExportedMesh(nativeApplication, mWorkingDirectory + RTABMAP_TMP_DIR, RTABMAP_TMP_FILENAME))
+				if(RTABMapLib.writeExportedMesh(nativeApplication, mWorkingDirectory + RTABMAP_TMP_DIR, RTABMAP_TMP_FILENAME))
 				{							
-					fileNames = com.introlab.rtabmap.Util.loadFileList(mWorkingDirectory + RTABMAP_TMP_DIR, false);
+					fileNames = Util.loadFileList(mWorkingDirectory + RTABMAP_TMP_DIR, false);
 					if(fileNames.length > 0)
 					{
 						String[] filesToZip = new String[fileNames.length];
@@ -3419,7 +3373,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 
 						try
 						{
-							com.introlab.rtabmap.Util.zip(filesToZip, zipOutput);
+							Util.zip(filesToZip, zipOutput);
 							success = true;
 						}
 						catch(IOException e)
@@ -3502,7 +3456,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			public void run() {
 
 				final String tmpDatabase = mWorkingDirectory+RTABMAP_TMP_DB;				
-				final int status = com.introlab.rtabmap.RTABMapLib.openDatabase2(nativeApplication, mOpenedDatabasePath, tmpDatabase, databaseInMemory, optimize);
+				final int status = RTABMapLib.openDatabase2(nativeApplication, mOpenedDatabasePath, tmpDatabase, databaseInMemory, optimize);
 
 				runOnUiThread(new Runnable() {
 					public void run() {
@@ -3602,7 +3556,7 @@ public class RTABMapActivity extends FragmentActivity implements OnClickListener
 			return;
 		}
 		
-		Intent intent = new Intent(getActivity(), com.introlab.rtabmap.SketchfabActivity.class);
+		Intent intent = new Intent(getActivity(), SketchfabActivity.class);
 
 		intent.putExtra(RTABMAP_AUTH_TOKEN_KEY, mAuthToken);
 		intent.putExtra(RTABMAP_WORKING_DIR_KEY, mWorkingDirectory);
