@@ -15,15 +15,12 @@
 package cn.nurasoft.zero.rtabmap;
 
 import android.Manifest;
-
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.Settings;
-
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 
 /** Helper to ask camera permission. */
@@ -38,7 +35,7 @@ public class PermissionHelper {
 
 	/** Check to see we have the necessary permissions for this app. */
 	public static boolean hasPermission(Activity activity, String permission) {
-		return ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED;
+		return activity.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
 	}
 
 	/** Check to see we have the necessary permissions for this app, and ask for them if we don't. */
@@ -61,14 +58,13 @@ public class PermissionHelper {
 		}
 		if(requestCode >=0)
 		{
-			ActivityCompat.requestPermissions(
-					activity, new String[] {permission}, requestCode);
+			activity.requestPermissions(new String[] {permission}, requestCode);
 		}
 	}
 
 	/** Check to see if we need to show the rationale for this permission. */
 	public static boolean shouldShowRequestPermissionRationale(Activity activity, String permission) {
-		return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission);
+		return activity.shouldShowRequestPermissionRationale(permission);
 	}
 
 	/** Launch Application Setting to grant permission. */

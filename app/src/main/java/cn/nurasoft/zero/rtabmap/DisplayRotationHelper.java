@@ -16,7 +16,6 @@ package cn.nurasoft.zero.rtabmap;
  * limitations under the License.
  */
 
-import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -26,7 +25,7 @@ import android.hardware.display.DisplayManager.DisplayListener;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
-/*import com.google.ar.core.Session;*/
+
 
 /**
  * Helper to track the display rotations. In particular, the 180 degree rotations are not notified
@@ -53,12 +52,12 @@ public final class DisplayRotationHelper implements DisplayListener {
     display = windowManager.getDefaultDisplay();
   }
 
-  /** Registers the display listener. Should be called from {@link Activity#onResume()}. */
+  /** Registers the display listener. Should be called from {@link AppCompatActivity#onResume()}. */
   public void onResume() {
     displayManager.registerDisplayListener(this, null);
   }
 
-  /** Unregisters the display listener. Should be called from {@link Activity#onPause()}. */
+  /** Unregisters the display listener. Should be called from {@link AppCompatActivity#onPause()}. */
   public void onPause() {
     displayManager.unregisterDisplayListener(this);
   }

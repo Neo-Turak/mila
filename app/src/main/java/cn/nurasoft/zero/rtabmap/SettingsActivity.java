@@ -1,10 +1,5 @@
 package cn.nurasoft.zero.rtabmap;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map.Entry;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -20,6 +15,10 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.Toast;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map.Entry;
 
 import cn.nurasoft.zero.R;
 
@@ -63,7 +62,8 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         				AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         				builder.setTitle("Choose Presets:");
         				builder.setItems(files, new DialogInterface.OnClickListener() {
-        					public void onClick(DialogInterface dialog, final int which) {
+        					@Override
+							public void onClick(DialogInterface dialog, final int which) {
         						//sp1 is the shared pref to copy to
         						SharedPreferences.Editor ed = getPreferenceScreen().getSharedPreferences().edit(); 
         						SharedPreferences sp = getActivity().getSharedPreferences(files[which], MODE_PRIVATE); //The shared preferences to copy from

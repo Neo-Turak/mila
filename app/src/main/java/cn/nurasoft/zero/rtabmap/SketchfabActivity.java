@@ -1,9 +1,5 @@
 package cn.nurasoft.zero.rtabmap;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -32,6 +28,11 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
 import cn.nurasoft.zero.R;
 
 public class SketchfabActivity extends Activity implements OnClickListener {

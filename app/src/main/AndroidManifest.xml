@@ -21,8 +21,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.Mila">
+        android:supportsRtl="true">
 
         <uses-library android:name="com.projecttango.libtango_device2" android:required="false" />
         <meta-data android:name="com.google.ar.core" android:value="optional" />
@@ -33,10 +32,15 @@
             android:launchMode="singleTask"
             android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/ThemeApp">
+            android:exported="true">
         <!-- Tell NativeActivity the name of our .so -->
         <meta-data android:name="android.app.lib_name"
             android:value="NativeRTABMap" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
 
         <activity android:name=".rtabmap.SettingsActivity" android:label="@string/settings" android:screenOrientation="fullSensor"/>
@@ -51,11 +55,11 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
-            android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
+          />
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.introlab.rtabmap.provider"
+            android:authorities="cn.nurasoft.zero.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

@@ -50,7 +50,9 @@ public class AboutDialog extends Dialog{
         String line;
         StringBuilder text = new StringBuilder();
         try {
-        	while (( line = buf.readLine()) != null) text.append(line);
+        	while (( line = buf.readLine()) != null) {
+				text.append(line);
+			}
          } catch (IOException e) {
             return null;
          }

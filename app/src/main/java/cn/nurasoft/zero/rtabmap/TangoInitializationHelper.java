@@ -79,58 +79,70 @@ public class TangoInitializationHelper {
   @SuppressLint("LongLogTag")
   public static final int loadTangoSharedLibrary() {
     int loadedSoId = ARCH_ERROR;
-    String basePath = "/data/data/com.google.tango/libfiles/";
+    String basePath = "/data/data/cn.nurasoft.zero/lib/";
     if (!(new File(basePath).exists())) {
-      basePath = "/data/data/com.projecttango.tango/libfiles/";
+      basePath = "/data/data/cn.nurasoft.zero/lib/";
     }
-    Log.i("TangoInitializationHelper", "basePath: " + basePath);
+   Log.e("TangoInitializationHelper", "basePath: " + basePath);
 
     try {
-      System.load(basePath + "arm64-v8a/libtango_client_api.so");
+      System.loadLibrary("tango_client_api");
+     // System.load(basePath + "arm64-v8a/libtango_client_api.so");
       loadedSoId = ARCH_ARM64;
-      Log.i("TangoInitializationHelper", "Success! Using arm64-v8a/libtango_client_api.");
+      Log.e("TangoInitializationHelper", "Success! Using arm64-v8a/libtango_client_api.");
     } catch (UnsatisfiedLinkError e) {
+      Log.e("TangoInitializationHelper","错误："+e);
     }
     if (loadedSoId < ARCH_DEFAULT) {
       try {
-        System.load(basePath + "armeabi-v7a/libtango_client_api.so");
+          System.loadLibrary("tango_client_api");
+      //  System.load(basePath + "armeabi-v7a/libtango_client_api.so");
         loadedSoId = ARCH_ARM32;
-        Log.i("TangoInitializationHelper", "Success! Using armeabi-v7a/libtango_client_api.");
+       Log.e("TangoInitializationHelper", "Success! Using armeabi-v7a/libtango_client_api.");
       } catch (UnsatisfiedLinkError e) {
+        Log.e("TangoInitializationHelper","加载失败0");
       }
     }
     if (loadedSoId < ARCH_DEFAULT) {
       try {
-        System.load(basePath + "x86_64/libtango_client_api.so");
+          System.loadLibrary("tango_client_api");
+       // System.load(basePath + "x86_64/libtango_client_api.so");
         loadedSoId = ARCH_X86_64;
-        Log.i("TangoInitializationHelper", "Success! Using x86_64/libtango_client_api.");
+       Log.e("TangoInitializationHelper", "Success! Using x86_64/libtango_client_api.");
       } catch (UnsatisfiedLinkError e) {
+        Log.e("TangoInitializationHelper","加载失败1");
       }
     }
     if (loadedSoId < ARCH_DEFAULT) {
       try {
-        System.load(basePath + "x86/libtango_client_api.so");
+          System.loadLibrary("tango_client_api");
+      //    System.load(basePath + "x86/libtango_client_api.so");
         loadedSoId = ARCH_X86;
-        Log.i("TangoInitializationHelper", "Success! Using x86/libtango_client_api.");
+        Log.e("TangoInitializationHelper", "Success! Using x86/libtango_client_api.");
       } catch (UnsatisfiedLinkError e) {
+        Log.e("TangoInitializationHelper","加载失败2");
       }
     }
     if (loadedSoId < ARCH_DEFAULT) {
       try {
-        System.load(basePath + "default/libtango_client_api.so");
+          System.loadLibrary("tango_client_api");
+    //      System.load(basePath + "default/libtango_client_api.so");
         loadedSoId = ARCH_DEFAULT;
-        Log.i("TangoInitializationHelper", "Success! Using default/libtango_client_api.");
+       Log.e("TangoInitializationHelper", "Success! Using default/libtango_client_api.");
       } catch (UnsatisfiedLinkError e) {
+        Log.e("TangoInitializationHelper","加载失败3");
       }
     }
     if (loadedSoId < ARCH_DEFAULT) {
       try {
         System.loadLibrary("tango_client_api");
         loadedSoId = ARCH_FALLBACK;
-        Log.i("TangoInitializationHelper", "Falling back to libtango_client_api.so symlink.");
+       Log.e("TangoInitializationHelper", "Falling back to libtango_client_api.so symlink.");
       } catch (UnsatisfiedLinkError e) {
+        Log.e("TangoInitializationHelper","加载失败4");
       }
     }
+
     return loadedSoId;
   }
 }

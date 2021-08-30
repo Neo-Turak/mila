@@ -8,7 +8,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.CameraConfig;
 import com.google.ar.core.CameraConfigFilter;
@@ -46,7 +45,6 @@ import android.util.Log;
 import android.view.Surface;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 
 public class ARCoreSharedCamera {
 
@@ -129,27 +127,27 @@ public class ARCoreSharedCamera {
 	private final CameraDevice.StateCallback cameraDeviceCallback =
 			new CameraDevice.StateCallback() {
 		@Override
-		public void onOpened(@NonNull CameraDevice cameraDevice) {
+		public void onOpened( CameraDevice cameraDevice) {
 			Log.d(TAG, "Camera device ID " + cameraDevice.getId() + " opened.");
 			ARCoreSharedCamera.this.cameraDevice = cameraDevice;
 			createCameraPreviewSession();
 		}
 
 		@Override
-		public void onClosed(@NonNull CameraDevice cameraDevice) {
+		public void onClosed( CameraDevice cameraDevice) {
 			Log.d(TAG, "Camera device ID " + cameraDevice.getId() + " closed.");
 			ARCoreSharedCamera.this.cameraDevice = null;
 		}
 
 		@Override
-		public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+		public void onDisconnected( CameraDevice cameraDevice) {
 			Log.w(TAG, "Camera device ID " + cameraDevice.getId() + " disconnected.");
 			cameraDevice.close();
 			ARCoreSharedCamera.this.cameraDevice = null;
 		}
 
 		@Override
-		public void onError(@NonNull CameraDevice cameraDevice, int error) {
+		public void onError( CameraDevice cameraDevice, int error) {
 			Log.e(TAG, "Camera device ID " + cameraDevice.getId() + " error " + error);
 			cameraDevice.close();
 			ARCoreSharedCamera.this.cameraDevice = null;
@@ -163,7 +161,7 @@ public class ARCoreSharedCamera {
 		// Called when the camera capture session is first configured after the app
 		// is initialized, and again each time the activity is resumed.
 		@Override
-		public void onConfigured(@NonNull CameraCaptureSession session) {
+		public void onConfigured( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session configured.");
 			captureSession = session;
 			setRepeatingCaptureRequest();
@@ -171,28 +169,28 @@ public class ARCoreSharedCamera {
 
 		@Override
 		public void onSurfacePrepared(
-				@NonNull CameraCaptureSession session, @NonNull Surface surface) {
+				 CameraCaptureSession session,  Surface surface) {
 			Log.d(TAG, "Camera capture surface prepared.");
 		}
 
 		@Override
-		public void onReady(@NonNull CameraCaptureSession session) {
+		public void onReady( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session ready.");
 		}
 
 		@Override
-		public void onActive(@NonNull CameraCaptureSession session) {
+		public void onActive( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session active.");
 			resumeARCore();
 		}
 
 		@Override
-		public void onClosed(@NonNull CameraCaptureSession session) {
+		public void onClosed( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session closed.");
 		}
 
 		@Override
-		public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+		public void onConfigureFailed( CameraCaptureSession session) {
 			Log.e(TAG, "Failed to configure camera capture session.");
 		}
 	};
@@ -203,32 +201,33 @@ public class ARCoreSharedCamera {
 
 		@Override
 		public void onCaptureCompleted(
-				@NonNull CameraCaptureSession session,
-				@NonNull CaptureRequest request,
-				@NonNull TotalCaptureResult result) {
+				 CameraCaptureSession session,
+				 CaptureRequest request,
+				 TotalCaptureResult result) {
 			//Log.i(TAG, "onCaptureCompleted");
 		}
 
 		//@Override // android 23 
+		@Override
 		public void onCaptureBufferLost(
-				@NonNull CameraCaptureSession session,
-				@NonNull CaptureRequest request,
-				@NonNull Surface target,
+				 CameraCaptureSession session,
+				 CaptureRequest request,
+				 Surface target,
 				long frameNumber) {
 			Log.e(TAG, "onCaptureBufferLost: " + frameNumber);
 		}
 
 		@Override
 		public void onCaptureFailed(
-				@NonNull CameraCaptureSession session,
-				@NonNull CaptureRequest request,
-				@NonNull CaptureFailure failure) {
+				 CameraCaptureSession session,
+				 CaptureRequest request,
+				 CaptureFailure failure) {
 			Log.e(TAG, "onCaptureFailed: " + failure.getFrameNumber() + " " + failure.getReason());
 		}
 
 		@Override
 		public void onCaptureSequenceAborted(
-				@NonNull CameraCaptureSession session, int sequenceId) {
+				 CameraCaptureSession session, int sequenceId) {
 			Log.e(TAG, "onCaptureSequenceAborted: " + sequenceId + " " + session);
 		}
 	};
@@ -281,7 +280,9 @@ public class ARCoreSharedCamera {
 
 			// Add a CPU image reader surface. On devices that don't support CPU image access, the image
 			// may arrive significantly later, or not arrive at all.
-			if (mTOFAvailable && cameraId.compareTo(depthCameraId) == 0) surfaceList.add(mTOFImageReader.imageReader.getSurface());
+			if (mTOFAvailable && cameraId.compareTo(depthCameraId) == 0) {
+				surfaceList.add(mTOFImageReader.imageReader.getSurface());
+			}
 			// Surface list should now contain three surfacemReadymReadys:
 			// 0. sharedCamera.getSurfaceTexture()
 			// 1. …
@@ -534,7 +535,9 @@ public class ARCoreSharedCamera {
 		// Use the currently configured CPU image size.
 		//Size desiredCPUImageSize = sharedSession.getCameraConfig().getImageSize();
 
-		if (mTOFAvailable) mTOFImageReader.createImageReader(depthWidth, depthHeight);
+		if (mTOFAvailable) {
+			mTOFImageReader.createImageReader(depthWidth, depthHeight);
+		}
 
 		// When ARCore is running, make sure it also updates our CPU image surface.
 		if (mTOFAvailable && cameraId.compareTo(depthCameraId) == 0) {
@@ -643,8 +646,9 @@ public class ARCoreSharedCamera {
 
 	public void setDisplayGeometry(int rotation, int width, int height)
 	{
-		if(sharedSession!=null)
+		if(sharedSession!=null) {
 			sharedSession.setDisplayGeometry(rotation, width, height);
+		}
 	}
 	
 	/*************************************************** ONDRAWFRAME ARCORE ************************************************************* */	
@@ -656,7 +660,9 @@ public class ARCoreSharedCamera {
 			return;
 		}
 		
-		if (mTOFAvailable && mTOFImageReader.frameCount == 0) return;
+		if (mTOFAvailable && mTOFImageReader.frameCount == 0) {
+			return;
+		}
 		
 		// Perform ARCore per-frame update.
 		Frame frame = null;
@@ -686,13 +692,14 @@ public class ARCoreSharedCamera {
 			// This will force a new session on the next frame received
 			RTABMapLib.postCameraPoseEvent(RTABMapActivity.nativeApplication, 0,0,0,0,0,0,0,0);
 			mActivity.runOnUiThread(new Runnable() {
+				@Override
 				public void run() {
 					if(mToast!=null && previousAnchorPose != null)
 					{
 						String msg = "Tracking lost! If you are mapping, you will need to relocalize before continuing.";
 						if(!mToast.getView().isShown())
 						{
-							mToast.makeText(mActivity.getApplicationContext(), 
+							Toast.makeText(mActivity.getApplicationContext(),
 									msg, Toast.LENGTH_LONG).show();
 						}
 						else
@@ -731,6 +738,7 @@ public class ARCoreSharedCamera {
 					Log.e(TAG, String.format("Odom = %f %f %f -> %f %f %f ArCore= %f %f %f -> %f %f %f", t[0], t[1], t[2], t2[0], t2[1], t2[2], t3[0], t3[1], t3[2], t4[0], t4[1], t4[2]));
 				
 					mActivity.runOnUiThread(new Runnable() {
+						@Override
 						public void run() {
 							if(mToast!=null)
 							{
@@ -740,7 +748,7 @@ public class ARCoreSharedCamera {
 										+ "indeed moving as fast.", speed);
 								if(!mToast.getView().isShown())
 								{
-									mToast.makeText(mActivity.getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+									Toast.makeText(mActivity.getApplicationContext(), msg, Toast.LENGTH_LONG).show();
 								}
 								else
 								{
@@ -757,13 +765,17 @@ public class ARCoreSharedCamera {
 			previousAnchorTimeStamp = frame.getTimestamp();
 			
 			double stamp = (double)frame.getTimestamp()/10e8;
-			if(!RTABMapActivity.DISABLE_LOG) Log.d(TAG, String.format("pose=%f %f %f q=%f %f %f %f stamp=%f", odomPose.tx(), odomPose.ty(), odomPose.tz(), odomPose.qx(), odomPose.qy(), odomPose.qz(), odomPose.qw(), stamp));
+			if(!RTABMapActivity.DISABLE_LOG) {
+				Log.d(TAG, String.format("pose=%f %f %f q=%f %f %f %f stamp=%f", odomPose.tx(), odomPose.ty(), odomPose.tz(), odomPose.qx(), odomPose.qy(), odomPose.qz(), odomPose.qw(), stamp));
+			}
 			RTABMapLib.postCameraPoseEvent(RTABMapActivity.nativeApplication, odomPose.tx(), odomPose.ty(), odomPose.tz(), odomPose.qx(), odomPose.qy(), odomPose.qz(), odomPose.qw(), stamp);
 			
 			CameraIntrinsics intrinsics = camera.getImageIntrinsics();
 			try{
 				Image image = frame.acquireCameraImage();
-				if(!RTABMapActivity.DISABLE_LOG) Log.d(TAG, String.format("frame=%d vs image=%d", frame.getTimestamp(), image.getTimestamp()));
+				if(!RTABMapActivity.DISABLE_LOG) {
+					Log.d(TAG, String.format("frame=%d vs image=%d", frame.getTimestamp(), image.getTimestamp()));
+				}
 				PointCloud cloud = frame.acquirePointCloud();
 				FloatBuffer points = cloud.getPoints();
 
@@ -782,14 +794,18 @@ public class ARCoreSharedCamera {
 				
 				float[] fl = intrinsics.getFocalLength();
 				float[] pp = intrinsics.getPrincipalPoint();
-				if(!RTABMapActivity.DISABLE_LOG) Log.d(TAG, String.format("fx=%f fy=%f cx=%f cy=%f", fl[0], fl[1], pp[0], pp[1]));
+				if(!RTABMapActivity.DISABLE_LOG) {
+					Log.d(TAG, String.format("fx=%f fy=%f cx=%f cy=%f", fl[0], fl[1], pp[0], pp[1]));
+				}
 				
 				ByteBuffer y = image.getPlanes()[0].getBuffer().asReadOnlyBuffer();
 				ByteBuffer u = image.getPlanes()[1].getBuffer().asReadOnlyBuffer();
 				ByteBuffer v = image.getPlanes()[2].getBuffer().asReadOnlyBuffer();
 
-				if(!RTABMapActivity.DISABLE_LOG) Log.d(TAG, String.format("RGB %dx%d len=%dbytes format=%d stamp=%f", 
-						image.getWidth(), image.getHeight(), y.limit(), image.getFormat(), stamp));
+				if(!RTABMapActivity.DISABLE_LOG) {
+					Log.d(TAG, String.format("RGB %dx%d len=%dbytes format=%d stamp=%f",
+							image.getWidth(), image.getHeight(), y.limit(), image.getFormat(), stamp));
+				}
 				
 				float[] texCoord = new float[8];
 				frame.transformCoordinates2d(
@@ -816,8 +832,10 @@ public class ARCoreSharedCamera {
 						depthStamp = (double)mTOFImageReader.timestamp/10e8;
 					}
 					
-					if(!RTABMapActivity.DISABLE_LOG) Log.d(TAG, String.format("Depth %dx%d len=%dbytes format=%d stamp=%f",
-							mTOFImageReader.WIDTH, mTOFImageReader.HEIGHT, depth.limit(), ImageFormat.DEPTH16, depthStamp));
+					if(!RTABMapActivity.DISABLE_LOG) {
+						Log.d(TAG, String.format("Depth %dx%d len=%dbytes format=%d stamp=%f",
+								mTOFImageReader.WIDTH, mTOFImageReader.HEIGHT, depth.limit(), ImageFormat.DEPTH16, depthStamp));
+					}
 
 					RTABMapLib.postOdometryEventDepth(
 							RTABMapActivity.nativeApplication,

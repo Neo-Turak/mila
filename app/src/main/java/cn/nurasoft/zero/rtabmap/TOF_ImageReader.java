@@ -15,8 +15,6 @@ import android.os.HandlerThread;
 import android.util.Log;
 import android.view.Surface;
 
-import androidx.annotation.NonNull;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -72,27 +70,27 @@ public class TOF_ImageReader implements ImageReader.OnImageAvailableListener {
  	public final CameraDevice.StateCallback cameraDeviceCallback =
  			new CameraDevice.StateCallback() {
  		@Override
- 		public void onOpened(@NonNull CameraDevice cameraDevice) {
+ 		public void onOpened( CameraDevice cameraDevice) {
  			Log.d(TAG, "Camera depth ID " + cameraDevice.getId() + " opened.");
  			TOF_ImageReader.this.cameraDevice = cameraDevice;
  			createCameraPreviewSession();
  		}
 
  		@Override
- 		public void onClosed(@NonNull CameraDevice cameraDevice) {
+ 		public void onClosed( CameraDevice cameraDevice) {
  			Log.d(TAG, "Camera device ID " + cameraDevice.getId() + " closed.");
  			TOF_ImageReader.this.cameraDevice = null;
  		}
 
  		@Override
- 		public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+ 		public void onDisconnected( CameraDevice cameraDevice) {
  			Log.w(TAG, "Camera depth ID " + cameraDevice.getId() + " disconnected.");
  			cameraDevice.close();
  			TOF_ImageReader.this.cameraDevice = null;
  		}
 
  		@Override
- 		public void onError(@NonNull CameraDevice cameraDevice, int error) {
+ 		public void onError( CameraDevice cameraDevice, int error) {
  			Log.e(TAG, "Camera depth ID " + cameraDevice.getId() + " error " + error);
  			cameraDevice.close();
  			TOF_ImageReader.this.cameraDevice = null;
@@ -103,7 +101,7 @@ public class TOF_ImageReader implements ImageReader.OnImageAvailableListener {
  		// Called when the camera capture session is first configured after the app
 		// is initialized, and again each time the activity is resumed.
 		@Override
-		public void onConfigured(@NonNull CameraCaptureSession session) {
+		public void onConfigured( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session configured.");
 			captureSession = session;
 			setRepeatingCaptureRequest();
@@ -111,27 +109,27 @@ public class TOF_ImageReader implements ImageReader.OnImageAvailableListener {
 
 		@Override
 		public void onSurfacePrepared(
-				@NonNull CameraCaptureSession session, @NonNull Surface surface) {
+				 CameraCaptureSession session,  Surface surface) {
 			Log.d(TAG, "Camera capture surface prepared.");
 		}
 
 		@Override
-		public void onReady(@NonNull CameraCaptureSession session) {
+		public void onReady( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session ready.");
 		}
 
 		@Override
-		public void onActive(@NonNull CameraCaptureSession session) {
+		public void onActive( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session active.");
 		}
 
 		@Override
-		public void onClosed(@NonNull CameraCaptureSession session) {
+		public void onClosed( CameraCaptureSession session) {
 			Log.d(TAG, "Camera capture session closed.");
 		}
 
 		@Override
-		public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+		public void onConfigureFailed( CameraCaptureSession session) {
 			Log.e(TAG, "Failed to configure camera capture session.");
 		}
  	};
@@ -142,32 +140,33 @@ public class TOF_ImageReader implements ImageReader.OnImageAvailableListener {
 
  		@Override
  		public void onCaptureCompleted(
- 				@NonNull CameraCaptureSession session,
- 				@NonNull CaptureRequest request,
- 				@NonNull TotalCaptureResult result) {
+ 				 CameraCaptureSession session,
+ 				 CaptureRequest request,
+ 				 TotalCaptureResult result) {
  			//Log.i(TAG, "onCaptureCompleted");
  		}
 
  		//@Override // android 23 
- 		public void onCaptureBufferLost(
- 				@NonNull CameraCaptureSession session,
- 				@NonNull CaptureRequest request,
- 				@NonNull Surface target,
+ 		@Override
+		public void onCaptureBufferLost(
+ 				 CameraCaptureSession session,
+ 				 CaptureRequest request,
+ 				 Surface target,
  				long frameNumber) {
  			Log.e(TAG, "onCaptureBufferLost: " + frameNumber);
  		}
 
  		@Override
  		public void onCaptureFailed(
- 				@NonNull CameraCaptureSession session,
- 				@NonNull CaptureRequest request,
- 				@NonNull CaptureFailure failure) {
+ 				 CameraCaptureSession session,
+ 				 CaptureRequest request,
+ 				 CaptureFailure failure) {
  			Log.e(TAG, "onCaptureFailed: " + failure.getFrameNumber() + " " + failure.getReason());
  		}
 
  		@Override
  		public void onCaptureSequenceAborted(
- 				@NonNull CameraCaptureSession session, int sequenceId) {
+ 				 CameraCaptureSession session, int sequenceId) {
  			Log.e(TAG, "onCaptureSequenceAborted: " + sequenceId + " " + session);
  		}
  	};

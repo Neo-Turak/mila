@@ -5,6 +5,7 @@ import android.util.AttributeSet;
 import android.widget.Spinner;
 
 
+
 /** Spinner extension that calls onItemSelected even when the selection is the same as its previous value 
 Author: Mattia Ruggiero 
 https://stackoverflow.com/questions/5335306/how-can-i-get-an-event-in-android-spinner-when-the-current-selected-item-is-sele
